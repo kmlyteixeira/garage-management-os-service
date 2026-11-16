@@ -1,0 +1,81 @@
+@baseUrl = http://localhost:8080
+@billingUrl = http://localhost:8081
+@executionUrl = http://localhost:8082
+@serviceOrderId = 00000000-0000-0000-0000-000000000001
+@correlationId = 00000000-0000-0000-0000-000000000002
+
+### Health
+GET {{baseUrl}}/health
+
+### Register customer
+POST {{baseUrl}}/customers
+Content-Type: application/json
+
+{
+  "name": "Cliente Demo",
+  "email": "cliente@example.com",
+  "phoneNumber": "11999999999",
+  "document": "12345678900"
+}
+
+### Register vehicle
+POST {{baseUrl}}/vehicles
+Content-Type: application/json
+
+{
+  "customerId": "00000000-0000-0000-0000-000000000003",
+  "make": "Toyota",
+  "model": "Corolla",
+  "year": 2022,
+  "licensePlate": "ABC1D23"
+}
+
+### Open service order
+POST {{baseUrl}}/service-orders
+Content-Type: application/json
+
+{
+  "customerId": "00000000-0000-0000-0000-000000000003",
+  "vehicleId": "00000000-0000-0000-0000-000000000004",
+  "amount": 250.00,
+  "serviceOrderNumber": "OS-0001",
+  "serviceItems": [],
+  "partItems": []
+}
+
+### Get service order
+GET {{baseUrl}}/service-orders/{{serviceOrderId}}
+
+### List customers
+GET {{baseUrl}}/customers
+
+### Get customer
+GET {{baseUrl}}/customers/00000000-0000-0000-0000-000000000003
+
+### Update customer
+PUT {{baseUrl}}/customers/00000000-0000-0000-0000-000000000003
+Content-Type: application/json
+
+{
+  "name": "Cliente Atualizado",
+  "email": "cliente.novo@example.com",
+  "phoneNumber": "11988888888",
+  "document": "12345678900"
+}
+
+### Deactivate customer
+PATCH {{baseUrl}}/customers/00000000-0000-0000-0000-000000000003/active
+Content-Type: application/json
+
+{
+  "isActive": false
+}
+
+### List vehicles
+GET {{baseUrl}}/vehicles
+
+### Get vehicle
+GET {{baseUrl}}/vehicles/00000000-0000-0000-0000-000000000004
+
+### Public status
+GET {{baseUrl}}/service-orders/public-status?document=12345678900&licensePlate=ABC-1D23
