@@ -23,12 +23,35 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-java@v4
+        with:
+          java-version: '17'
+          distribution: temurin
       - uses: actions/setup-dotnet@v4
         with:
           dotnet-version: 8.0.x
+      - name: Install SonarQube scanner
+        run: dotnet tool install --global dotnet-sonarscanner
+      - name: Start SonarQube analysis
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+        run: >
+          dotnet-sonarscanner begin
+          /k:"kmlyteixeira_garage-management-os-service"
+          /o:"kmlyteixeira"
+          /d:sonar.token="$SONAR_TOKEN"
+          /d:sonar.cs.cobertura.reportsPaths="**/coverage.cobertura.xml"
       - run: dotnet restore
       - run: dotnet build --no-restore --configuration Release /warnaserror
+      - run: dotnet test --configuration Release --collect:"XPlat Code Coverage"
       - run: dotnet list package --vulnerable --include-transitive
+      - name: Finish SonarQube analysis
+        if: always()
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+        run: dotnet-sonarscanner end /d:sonar.token="$SONAR_TOKEN"
   container:
     if: github.event_name == 'push'
     needs: quality
