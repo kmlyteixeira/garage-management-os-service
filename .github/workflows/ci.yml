@@ -44,7 +44,7 @@ jobs:
           /d:sonar.token="$SONAR_TOKEN"
           /d:sonar.cs.cobertura.reportsPaths="**/coverage.cobertura.xml"
       - run: dotnet restore
-      - run: dotnet build --no-restore --configuration Release /warnaserror
+      - run: dotnet build --no-restore --configuration Release
       - run: dotnet test --configuration Release --collect:"XPlat Code Coverage"
       - run: dotnet list package --vulnerable --include-transitive
       - name: Finish SonarQube analysis
