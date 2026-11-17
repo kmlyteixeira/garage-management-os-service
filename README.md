@@ -84,7 +84,7 @@ Espaço reservado para inserir o print do SonarQube:
 
 O projeto possui testes automatizados com foco nos **domínios críticos**.
 
-[![Coverage](https://sonarcloud.io/api/project_badges/measure?project=kmlyteixeira_garage-management-api-dotnet&metric=coverage&token=ad876c9d0e30de7ccbbf7e98df620074ea2c6202)](https://sonarcloud.io/summary/new_code?id=kmlyteixeira_garage-management-billing-service)
+<img width="568" height="174" alt="OsService" src="https://github.com/user-attachments/assets/c9e9d85d-1e9a-462a-8bca-aeb76ae33bbf" />
 
 Testes automatizados:
 
