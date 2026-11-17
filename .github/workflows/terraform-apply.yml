@@ -1,0 +1,84 @@
+name: OS Terraform apply
+
+on:
+  push:
+    branches: [master]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  apply:
+    runs-on: ubuntu-latest
+    environment: aws-lab
+    defaults:
+      run:
+        working-directory: infra
+    env:
+      TF_VAR_region: ${{ vars.AWS_REGION || 'us-east-1' }}
+      TF_VAR_project_name: garage-management
+      TF_VAR_environment: ${{ vars.TERRAFORM_ENVIRONMENT || 'homologacao' }}
+      TF_STATE_BUCKET: ${{ vars.TF_STATE_BUCKET }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: hashicorp/setup-terraform@v3
+      - uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-session-token: ${{ secrets.AWS_SESSION_TOKEN }}
+          aws-region: ${{ vars.AWS_REGION || 'us-east-1' }}
+      - name: Load platform parameters
+        run: |
+          set -euo pipefail
+          cluster_name="${TF_VAR_project_name}-${TF_VAR_environment}-eks"
+          state_bucket="${TF_STATE_BUCKET:-}"
+          test -n "$state_bucket"
+          echo "TF_VAR_cluster_name=$cluster_name" >> "$GITHUB_ENV"
+          echo "Terraform environment: $TF_VAR_environment"
+          echo "Terraform state bucket: $state_bucket"
+          echo "Terraform cluster: $cluster_name"
+      - name: Initialize Terraform
+        run: terraform init -backend-config="bucket=${TF_STATE_BUCKET}" -backend-config="key=os/terraform.tfstate" -backend-config="region=${TF_VAR_region}"
+      - uses: azure/setup-kubectl@v4
+      - name: Configure Kubernetes access
+        run: |
+          aws eks update-kubeconfig \
+            --name "$TF_VAR_cluster_name" \
+            --region "$TF_VAR_region"
+          kubectl cluster-info
+      - name: Check schedulable Kubernetes capacity
+        run: |
+          set -euo pipefail
+          kubectl get nodes -o wide
+          schedulable_ready_nodes="$(
+            kubectl get nodes --no-headers |
+              awk '$2 ~ /^Ready/ && $2 !~ /SchedulingDisabled/ { count++ } END { print count + 0 }'
+          )"
+          if [ "$schedulable_ready_nodes" -lt 1 ]; then
+            echo "::error::No schedulable Ready nodes are available in the EKS cluster."
+            kubectl describe nodes || true
+            exit 1
+          fi
+      - name: Migrate deployment state identity
+        run: |
+          if terraform state list | grep -Fxq "kubernetes_deployment_v1.service"; then
+            terraform state rm kubernetes_deployment_v1.service
+            terraform import kubernetes_deployment_v1.service garage-microservices/os-service
+          fi
+      - run: terraform plan -out=tfplan
+      - name: Apply Terraform
+        run: |
+          set +e
+          terraform apply -auto-approve tfplan
+          status=$?
+          if [ "$status" -ne 0 ]; then
+            echo "::group::OS deployment status"
+            kubectl get deployment os-service -n garage-microservices -o wide || true
+            kubectl get pods -n garage-microservices -l app=os-service -o wide || true
+            kubectl describe deployment os-service -n garage-microservices || true
+            kubectl get events -n garage-microservices --sort-by=.lastTimestamp | tail -n 40 || true
+            echo "::endgroup::"
+            exit "$status"
+          fi

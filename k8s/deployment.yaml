@@ -5,6 +5,12 @@ metadata:
   namespace: garage-microservices
 spec:
   replicas: 2
+  progressDeadlineSeconds: 300
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 0
   selector:
     matchLabels: { app: os-service }
   template:
@@ -34,8 +40,18 @@ spec:
               valueFrom: { secretKeyRef: { name: garage-auth, key: public-key-pem, optional: true } }
             - name: RabbitMq__Uri
               value: amqp://guest:guest@rabbitmq:5672/
-          readinessProbe: { httpGet: { path: /health, port: 8080 } }
-          livenessProbe: { httpGet: { path: /health, port: 8080 }, initialDelaySeconds: 15, periodSeconds: 20 }
+          readinessProbe:
+            httpGet: { path: /health, port: 8080 }
+            initialDelaySeconds: 5
+            periodSeconds: 5
+            timeoutSeconds: 3
+            failureThreshold: 6
+          livenessProbe:
+            httpGet: { path: /health, port: 8080 }
+            initialDelaySeconds: 15
+            periodSeconds: 20
+            timeoutSeconds: 3
+            failureThreshold: 3
 ---
 apiVersion: v1
 kind: Service

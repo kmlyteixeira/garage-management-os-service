@@ -2,7 +2,7 @@ name: OS Service CI/CD
 on:
   pull_request:
   push:
-    branches: [main]
+    branches: [master]
 permissions:
   contents: read
   packages: write
@@ -44,7 +44,9 @@ jobs:
         with:
           context: .
           push: true
-          tags: ghcr.io/${{ github.repository }}:${{ github.sha }}
+          tags: |
+            ghcr.io/${{ github.repository }}:${{ github.sha }}
+            ghcr.io/${{ github.repository }}:latest
   deploy:
     if: github.event_name == 'push'
     needs: container
